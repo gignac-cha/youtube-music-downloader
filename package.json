@@ -1,0 +1,18 @@
+{
+  "name": "youtube-music-downloader",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@7.29.3+sha1.700f102ef6d5e57e01093ede3bfe5028d18cc52b",
+  "devDependencies": {
+    "eslint": "^9.3.0",
+    "prettier": "^3.2.5",
+    "typescript": "^5.4.5"
+  }
+}
