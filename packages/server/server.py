@@ -2,6 +2,7 @@ import flask
 
 import os
 import sys
+import pathlib
 
 import lxml.etree
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
@@ -70,21 +71,25 @@ async def post_download():
   if url is None:
     return flask.jsonify(error=True, message="invalid url"), 400
   info = downloader.download.info(url)
-  os.makedirs("../../outputs/info", exist_ok=True)
-  with open(f'../../outputs/info/{info["id"]}.json', 'w') as wo:
+  output_path = pathlib.Path("../../outputs").resolve()
+  info_path = output_path / "info"
+  os.makedirs(info_path, exist_ok=True)
+  with open(info_path / f'{info["id"]}.json', 'w') as wo:
     json.dump(info, wo)
-  with open(f'../../outputs/{info["id"]}.json', 'w') as wo:
+  with open(output_path / f'{info["id"]}.json', 'w') as wo:
     json.dump({}, wo)
   executor.submit(lambda id: asyncio.run(downloader.download.download(id)), info["id"])
   return flask.jsonify(error=False, data=info), 202
 
 def get_file(id, as_attachment: bool):
-  path = f'../../outputs/{id}.json'
+  output_path = pathlib.Path("../../outputs").resolve()
+  path = output_path / f'{id}.json'
   if not os.path.exists(path):
     return flask.jsonify(error=True, message="invalid id"), 404
   with open(path, 'r') as ro:
     data = json.load(ro)
-    root, ext = os.path.splitext(data["filename"])
+    file_path = pathlib.Path(data["filename"]).resolve()
+    root, ext = os.path.splitext(file_path)
     return flask.send_file(f'{root}.mp3', as_attachment=as_attachment)
 
 @server.get("/download/<id>")
@@ -97,7 +102,8 @@ def get_play_id(id):
 
 @server.get("/api/v1/info/<id>")
 def get_info_id(id):
-  path = f'../../outputs/{id}.json'
+  output_path = pathlib.Path("../../outputs").resolve()
+  path = output_path / f'{id}.json'
   if not os.path.exists(path):
     return flask.jsonify(error=True, message="invalid id"), 404
   with open(path, 'r') as ro:
@@ -114,11 +120,12 @@ def get_info_id(id):
 
 @server.get("/api/v1/downloaded")
 def get_downloaded():
-  os.makedirs("../../outputs", exist_ok=True)
+  output_path = pathlib.Path("../../outputs").resolve()
+  os.makedirs(output_path, exist_ok=True)
   data = []
-  for path in os.listdir("../../outputs"):
+  for path in os.listdir(output_path):
     if path.endswith(".json"):
-      with open(f'../../outputs/{path}', 'r') as ro:
+      with open(output_path / f'{path}', 'r') as ro:
         item = json.load(ro)
         item = dict(
           info_dict=dict(
