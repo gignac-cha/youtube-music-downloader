@@ -1,0 +1,10 @@
+yt-dlp==2024.5.27
+ffmpeg==1.4
+eyed3==0.9.7
+wget==3.2
+
+flask[async]==3.0.3
+flask_cors==4.0.1
+requests==2.32.3
+lxml==5.2.2
+cssselect==1.2.0
