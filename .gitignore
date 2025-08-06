@@ -332,4 +332,13 @@ pyrightconfig.json
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,node,python
 
 
-outputs
+outputs/
+.claude/
+
+# uv
+.venv/
+.uv-cache/
+uv.lock
+
+# Static files
+packages/server/static/

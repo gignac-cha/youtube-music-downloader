@@ -1,10 +1,17 @@
-yt-dlp==2024.5.27
-ffmpeg==1.4
+# Core YouTube downloading
+yt-dlp>=2025.01.17
+ffmpeg-python==0.2.0
 eyed3==0.9.7
 wget==3.2
 
+# Web framework
 flask[async]==3.0.3
 flask_cors==4.0.1
 requests==2.32.3
 lxml==5.2.2
 cssselect==1.2.0
+typer[all]==0.9.0
+
+# Additional dependencies for enhanced functionality
+fake-useragent==1.4.0  # Dynamic user agent rotation
+backoff==2.2.1         # Exponential backoff utilities
