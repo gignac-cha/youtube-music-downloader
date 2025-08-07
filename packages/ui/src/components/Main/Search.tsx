@@ -129,6 +129,7 @@ export const Search = () => {
                   const currentQuery = query;
                   reset();
                   setTimeout(async () => {
+                    updateQuery(currentQuery);
                     requestSearch();
                     try {
                       const data = await postSearch(currentQuery);
@@ -155,6 +156,7 @@ export const Search = () => {
               const currentQuery = query;
               reset();
               setTimeout(async () => {
+                updateQuery(currentQuery);
                 requestSearch();
                 try {
                   const data = await postSearch(currentQuery);
