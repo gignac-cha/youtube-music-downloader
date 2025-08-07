@@ -62,7 +62,26 @@ async def post_search():
                         title = next(iter(videoRenderer["title"]["runs"]))["text"]
                         artist = next(iter(videoRenderer["ownerText"]["runs"]))["text"]
                         thumbnail = max(videoRenderer["thumbnail"]["thumbnails"], key=lambda thumbnail: thumbnail["width"] ** 2 + thumbnail["height"])["url"]
-                        data.append(dict(id=id, title=title, artist=artist, thumbnail=thumbnail))
+                        
+                        # Extract view count
+                        view_count = None
+                        if "viewCountText" in videoRenderer:
+                            view_count_text = videoRenderer["viewCountText"].get("simpleText", "")
+                            view_count = view_count_text
+                        
+                        # Extract duration
+                        duration = None
+                        if "lengthText" in videoRenderer:
+                            duration = videoRenderer["lengthText"].get("simpleText", "")
+                        
+                        data.append(dict(
+                            id=id, 
+                            title=title, 
+                            artist=artist, 
+                            thumbnail=thumbnail,
+                            view_count=view_count,
+                            duration=duration
+                        ))
         return flask.jsonify(error=False, data=data)
     return flask.jsonify(error=True, message="unexpected error"), 500
 

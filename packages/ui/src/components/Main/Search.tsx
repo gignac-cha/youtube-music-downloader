@@ -1,5 +1,6 @@
 import {
   CheckIcon,
+  EyeOpenIcon,
   MagnifyingGlassIcon,
   VideoIcon,
 } from '@radix-ui/react-icons';
@@ -18,20 +19,42 @@ import { useQuery } from '@tanstack/react-query';
 import { useCallback, useContext, useMemo } from 'react';
 import { DownloaderContext } from './DownloaderContext';
 
+type SearchResultItem = {
+  id: string;
+  title: string;
+  artist: string;
+  thumbnail: string;
+  view_count?: string;
+  duration?: string;
+};
+
 type SearchData =
   | {
       error: false;
-      data: {
-        id: string;
-        title: string;
-        artist: string;
-        thumbnail: string;
-      }[];
+      data: SearchResultItem[];
     }
   | {
       error: true;
       message: string;
     };
+
+const formatViewCount = (viewCount: string): string => {
+  // Extract numeric value from strings like "1,234,567 views" or "1234567"
+  const numericString = viewCount.replace(/[^\d]/g, '');
+  const number = parseInt(numericString, 10);
+  
+  if (isNaN(number)) return viewCount;
+  
+  if (number >= 1000000000) {
+    return `${(number / 1000000000).toFixed(1)}B`;
+  } else if (number >= 1000000) {
+    return `${(number / 1000000).toFixed(1)}M`;
+  } else if (number >= 1000) {
+    return `${(number / 1000).toFixed(1)}K`;
+  }
+  
+  return number.toString();
+};
 
 const postSearch = async (query: string) => {
   const headers = {
@@ -102,28 +125,55 @@ export const Search = () => {
       <details open={isOpened}>
         <summary>Search results ({list?.length ?? 0} results)</summary>
         <Flex direction={'column'} gap={'1'}>
-          {list?.map(({ id, title, artist, thumbnail }) => (
-            <Card size={'1'}>
+          {list?.map((item: SearchResultItem) => (
+            <Card size={'1'} key={item.id}>
               <Flex direction={'row'} gap={'2'} align={'center'}>
                 <Popover.Root>
                   <Popover.Trigger>
-                    <Avatar src={thumbnail} fallback={<VideoIcon />} />
+                    <Avatar src={item.thumbnail} fallback={<VideoIcon />} size={'4'} />
                   </Popover.Trigger>
                   <Popover.Content>
-                    <img src={thumbnail} width={640} />
+                    <img src={item.thumbnail} width={640} />
                   </Popover.Content>
                 </Popover.Root>
-                <Flex direction={'column'} flexGrow={'1'}>
-                  <Text weight={'bold'}>{title}</Text>
-                  <Text>{artist}</Text>
+                <Flex direction={'column'} flexGrow={'1'} gap={'1'}>
+                  <Text weight={'bold'} size={'2'} style={{ lineHeight: 1.3 }}>
+                    {item.title}
+                  </Text>
+                  <Flex direction={'row'} gap={'2'} align={'center'}>
+                    <Text size={'1'} color={'gray'}>
+                      {item.artist}
+                    </Text>
+                    {item.duration && (
+                      <Flex align={'center'} gap={'1'}>
+                        <Box style={{ width: '3px', height: '3px', backgroundColor: 'var(--gray-8)', borderRadius: '50%' }} />
+                        <Text size={'1'} color={'gray'}>
+                          {item.duration}
+                        </Text>
+                      </Flex>
+                    )}
+                    {item.view_count && (
+                      <Flex 
+                        align={'center'} 
+                        gap={'1'} 
+                        title={`${item.view_count} views`}
+                      >
+                        <Box style={{ width: '3px', height: '3px', backgroundColor: 'var(--gray-8)', borderRadius: '50%' }} />
+                        <EyeOpenIcon width={12} height={12} style={{ color: 'var(--gray-9)' }} />
+                        <Text size={'1'} color={'gray'}>
+                          {formatViewCount(item.view_count)}
+                        </Text>
+                      </Flex>
+                    )}
+                  </Flex>
                 </Flex>
                 <IconButton
                   onClick={() =>
-                    updateURL(`https://www.youtube.com/watch?v=${id}`)
+                    updateURL(`https://www.youtube.com/watch?v=${item.id}`)
                   }
-                  variant={url.includes(id) ? 'soft' : 'outline'}
+                  variant={url.includes(item.id) ? 'soft' : 'outline'}
                 >
-                  {url.includes(id) && <CheckIcon />}
+                  {url.includes(item.id) && <CheckIcon />}
                 </IconButton>
               </Flex>
             </Card>
