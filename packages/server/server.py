@@ -85,6 +85,14 @@ async def post_search():
         return flask.jsonify(error=False, data=data)
     return flask.jsonify(error=True, message="unexpected error"), 500
 
+def is_already_downloaded(video_id):
+    """Check if a video is already downloaded by looking for MP3 files with the video ID"""
+    os.makedirs(OUTPUTS_DIR, exist_ok=True)
+    for filename in os.listdir(OUTPUTS_DIR):
+        if filename.endswith(".mp3") and f"[{video_id}]" in filename:
+            return True, filename
+    return False, None
+
 @server.post("/api/v1/download")
 async def post_download():
     url = flask.request.json.get("url", None)
@@ -93,6 +101,32 @@ async def post_download():
     
     try:
         info = downloader.download.info(url)
+        video_id = info["id"]
+        
+        # Check if already downloaded
+        already_downloaded, existing_file = is_already_downloaded(video_id)
+        if already_downloaded:
+            # Create progress file showing completion
+            os.makedirs(OUTPUTS_DIR / "info", exist_ok=True)
+            with open(OUTPUTS_DIR / "info" / f'{video_id}.json', 'w') as wo:
+                json.dump(info, wo)
+            
+            # Create completion status immediately
+            file_size = os.path.getsize(OUTPUTS_DIR / existing_file)
+            completion_data = {
+                "info_dict": {"id": video_id},
+                "status": "finished",
+                "speed": 0,
+                "downloaded_bytes": file_size,
+                "total_bytes": file_size,
+                "elapsed": 0,
+            }
+            with open(OUTPUTS_DIR / f'{video_id}.json', 'w') as wo:
+                json.dump(completion_data, wo)
+                
+            return flask.jsonify(error=False, data=info), 202
+        
+        # Not downloaded yet, proceed with normal download
         os.makedirs(OUTPUTS_DIR / "info", exist_ok=True)
         
         with open(OUTPUTS_DIR / "info" / f'{info["id"]}.json', 'w') as wo:
