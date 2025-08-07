@@ -24,7 +24,8 @@ type DownloaderAction =
   | { type: 'update-url'; url: string }
   | { type: 'request-download' }
   | { type: 'progress'; id: string }
-  | { type: 'finish' };
+  | { type: 'finish' }
+  | { type: 'reset' };
 
 const reducer: Reducer<typeof initialState, DownloaderAction> = (
   prevState,
@@ -45,6 +46,8 @@ const reducer: Reducer<typeof initialState, DownloaderAction> = (
       return { ...prevState, state: 'downloading', id: action.id };
     case 'finish':
       return { ...prevState, state: 'finished' };
+    case 'reset':
+      return initialState;
   }
 };
 
@@ -56,6 +59,8 @@ const defaultValue = {
   updateURL: (url: string) => {},
   requestDownload: () => {},
   watchProgress: (id: string) => {},
+  finish: () => {},
+  reset: () => {},
 };
 
 export const DownloaderContext = createContext(defaultValue);
@@ -75,6 +80,8 @@ export const DownloaderContextProvider = ({ children }: PropsWithChildren) => {
         updateURL: (url: string) => dispatch({ type: 'update-url', url }),
         requestDownload: () => dispatch({ type: 'request-download' }),
         watchProgress: (id: string) => dispatch({ type: 'progress', id }),
+        finish: () => dispatch({ type: 'finish' }),
+        reset: () => dispatch({ type: 'reset' }),
       }}
     >
       {children}

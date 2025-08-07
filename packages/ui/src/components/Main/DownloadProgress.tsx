@@ -35,7 +35,7 @@ const getInfoID = async (id: string) => {
 };
 
 export const DownloadProgress = () => {
-  const { id } = useContext(DownloaderContext);
+  const { id, finish } = useContext(DownloaderContext);
 
   const { data: progressData, refetch: getProgress } = useQuery({
     queryKey: ['info', id],
@@ -54,6 +54,7 @@ export const DownloadProgress = () => {
     if (data) {
       if (data.status === 'finished') {
         stop();
+        finish();
         await queryClient.invalidateQueries({ queryKey: ['downloaded'] });
       }
     }

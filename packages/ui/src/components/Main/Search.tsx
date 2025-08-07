@@ -2,6 +2,7 @@ import {
   CheckIcon,
   EyeOpenIcon,
   MagnifyingGlassIcon,
+  ResetIcon,
   VideoIcon,
 } from '@radix-ui/react-icons';
 import {
@@ -82,6 +83,7 @@ export const Search = () => {
     list,
     updateURL,
     url,
+    reset,
   } = useContext(DownloaderContext);
 
   const { refetch: search } = useQuery({
@@ -96,24 +98,38 @@ export const Search = () => {
     if (data) {
       setList(data);
     }
-  }, []);
+  }, [requestSearch, search, setList]);
 
   const isOpened = useMemo(() => !!list && !url, [list, url]);
 
   return (
     <Flex direction={'column'} gap={'2'}>
-      <Flex direction={'row'} gap={'4'}>
+      <Flex direction={'row'} gap={'2'}>
         <Box flexGrow={'1'}>
           <TextField.Root
             placeholder="Input query here..."
-            disabled={state !== 'ready'}
+            disabled={state !== 'ready' && state !== 'finished'}
+            value={query}
             onChange={(event) => updateQuery(event.currentTarget.value)}
             onKeyDown={(event) => {
-              if (event.key === 'Enter' && query.length > 0 && state === 'ready') {
-                onClick();
+              if (event.key === 'Enter' && query.length > 0 && (state === 'ready' || state === 'finished')) {
+                if (state === 'finished') {
+                  const currentQuery = query;
+                  reset();
+                  setTimeout(async () => {
+                    requestSearch();
+                    try {
+                      const data = await postSearch(currentQuery);
+                      setList(data);
+                    } catch (error) {
+                      console.error('Search failed:', error);
+                    }
+                  }, 0);
+                } else {
+                  onClick();
+                }
               }
             }}
-            defaultValue={query}
           >
             <TextField.Slot>
               <MagnifyingGlassIcon />
@@ -121,10 +137,34 @@ export const Search = () => {
           </TextField.Root>
         </Box>
         <IconButton
-          disabled={query.length === 0 || state !== 'ready'}
-          onClick={onClick}
+          disabled={query.length === 0 || (state !== 'ready' && state !== 'finished')}
+          onClick={async () => {
+            if (state === 'finished') {
+              const currentQuery = query;
+              reset();
+              setTimeout(async () => {
+                requestSearch();
+                try {
+                  const data = await postSearch(currentQuery);
+                  setList(data);
+                } catch (error) {
+                  console.error('Search failed:', error);
+                }
+              }, 0);
+            } else {
+              onClick();
+            }
+          }}
         >
           {state === 'searching' ? <Spinner /> : <MagnifyingGlassIcon />}
+        </IconButton>
+        <IconButton
+          variant="soft"
+          onClick={reset}
+          title="초기화"
+          disabled={state === 'searching' || state === 'requesting' || state === 'downloading'}
+        >
+          <ResetIcon />
         </IconButton>
       </Flex>
       <details open={isOpened}>
