@@ -1,5 +1,6 @@
 import {
   CheckIcon,
+  DownloadIcon,
   EyeOpenIcon,
   MagnifyingGlassIcon,
   ResetIcon,
@@ -7,6 +8,7 @@ import {
 } from '@radix-ui/react-icons';
 import {
   Avatar,
+  Badge,
   Box,
   Card,
   Flex,
@@ -18,6 +20,7 @@ import {
 } from '@radix-ui/themes';
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useContext, useMemo } from 'react';
+import { getDownloaded } from '../../api/downloaded';
 import { DownloaderContext } from './DownloaderContext';
 
 type SearchResultItem = {
@@ -92,6 +95,11 @@ export const Search = () => {
     enabled: false,
   });
 
+  const { data: downloadedFiles = [] } = useQuery({
+    queryKey: ['downloaded'],
+    queryFn: getDownloaded,
+  });
+
   const onClick = useCallback(async () => {
     requestSearch();
     const { data } = await search();
@@ -101,6 +109,10 @@ export const Search = () => {
   }, [requestSearch, search, setList]);
 
   const isOpened = useMemo(() => !!list && !url, [list, url]);
+
+  const isDownloaded = useCallback((videoId: string) => {
+    return downloadedFiles.some((file: any) => file.info_dict.id === videoId);
+  }, [downloadedFiles]);
 
   return (
     <Flex direction={'column'} gap={'2'}>
@@ -182,9 +194,17 @@ export const Search = () => {
                   </Popover.Content>
                 </Popover.Root>
                 <Flex direction={'column'} flexGrow={'1'} gap={'1'}>
-                  <Text weight={'bold'} size={'2'} style={{ lineHeight: 1.3 }}>
-                    {item.title}
-                  </Text>
+                  <Flex direction={'row'} align={'center'} gap={'2'}>
+                    <Text weight={'bold'} size={'2'} style={{ lineHeight: 1.3 }}>
+                      {item.title}
+                    </Text>
+                    {isDownloaded(item.id) && (
+                      <Badge color="green" size="1">
+                        <DownloadIcon width={10} height={10} />
+                        다운로드됨
+                      </Badge>
+                    )}
+                  </Flex>
                   <Flex direction={'row'} gap={'2'} align={'center'}>
                     <Text size={'1'} color={'gray'}>
                       {item.artist}

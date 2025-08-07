@@ -19,30 +19,7 @@ import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { convertFileSize } from '../../utilities/common';
 
-type DownloadedData =
-  | {
-      error: false;
-      data: {
-        info_dict: {
-          id: string;
-          title: string;
-        };
-        total_bytes: number;
-      }[];
-    }
-  | {
-      error: true;
-      message: string;
-    };
-
-const getDownloaded = async () => {
-  const response = await fetch('/api/v1/downloaded');
-  const data: DownloadedData = await response.json();
-  if (data.error) {
-    throw new Error(data.message);
-  }
-  return data.data;
-};
+import { getDownloaded } from '../../api/downloaded';
 
 const useAudio = (element: HTMLAudioElement) => {
   const [isPlaying, setPlaying] = useState(false);
