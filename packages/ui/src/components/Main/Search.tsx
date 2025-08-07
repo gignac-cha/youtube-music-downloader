@@ -108,6 +108,11 @@ export const Search = () => {
             placeholder="Input query here..."
             disabled={state !== 'ready'}
             onChange={(event) => updateQuery(event.currentTarget.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && query.length > 0 && state === 'ready') {
+                onClick();
+              }
+            }}
             defaultValue={query}
           >
             <TextField.Slot>
