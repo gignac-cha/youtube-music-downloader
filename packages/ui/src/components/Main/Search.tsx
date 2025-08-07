@@ -200,7 +200,18 @@ export const Search = () => {
                 </Popover.Root>
                 <Flex direction={'column'} flexGrow={'1'} gap={'1'}>
                   <Flex direction={'row'} align={'center'} gap={'2'}>
-                    <Text weight={'bold'} size={'2'} style={{ lineHeight: 1.3 }}>
+                    <Text 
+                      weight={'bold'} 
+                      size={'2'} 
+                      style={{ 
+                        lineHeight: 1.3, 
+                        cursor: 'pointer',
+                        textDecoration: 'none'
+                      }}
+                      onClick={() => window.open(`https://www.youtube.com/watch?v=${item.id}`, '_blank')}
+                      onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'}
+                      onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}
+                    >
                       {item.title}
                     </Text>
                     {isDownloaded(item.id) && (
