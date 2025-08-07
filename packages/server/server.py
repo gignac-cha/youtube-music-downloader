@@ -139,7 +139,6 @@ async def post_download():
         
     except Exception as e:
         error_msg = str(e)
-        print(f"Download error: {e}")
         
         if "bot" in error_msg.lower() or "sign in" in error_msg.lower():
             return flask.jsonify(
@@ -188,17 +187,31 @@ def get_info_id(id):
     if not os.path.exists(path):
         return flask.jsonify(error=True, message="invalid id"), 404
     
-    with open(path, 'r') as ro:
-        data = json.load(ro)
+    try:
+        with open(path, 'r') as ro:
+            data = json.load(ro)
+            response_data = dict(
+                info_dict=dict(id=data.get("info_dict", {}).get("id")),
+                status=data.get("status", "downloading"),
+                speed=data.get("speed", 0),
+                downloaded_bytes=data.get("downloaded_bytes", 0),
+                total_bytes=data.get("total_bytes", 1),
+                elapsed=data.get("elapsed", 0),
+            )
+            return flask.jsonify(error=False, data=response_data), 200
+    except json.JSONDecodeError as e:
+        # Return default downloading state for corrupted progress files
         response_data = dict(
-            info_dict=dict(id=data.get("info_dict", {}).get("id")),
-            status=data.get("status", "downloading"),
-            speed=data.get("speed", 0),
-            downloaded_bytes=data.get("downloaded_bytes", 0),
-            total_bytes=data.get("total_bytes", 1),
-            elapsed=data.get("elapsed", 0),
+            info_dict=dict(id=id),
+            status="downloading",
+            speed=0,
+            downloaded_bytes=0,
+            total_bytes=1,
+            elapsed=0,
         )
         return flask.jsonify(error=False, data=response_data), 200
+    except Exception as e:
+        return flask.jsonify(error=True, message="failed to read progress"), 500
 
 @server.get("/api/v1/downloaded")
 def get_downloaded():

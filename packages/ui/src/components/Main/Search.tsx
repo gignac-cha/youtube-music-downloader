@@ -98,7 +98,9 @@ export const Search = () => {
   const { data: downloadedFiles = [] } = useQuery({
     queryKey: ['downloaded'],
     queryFn: getDownloaded,
+    staleTime: 0, // Always refetch when cache is invalidated
   });
+
 
   const onClick = useCallback(async () => {
     requestSearch();
@@ -111,6 +113,7 @@ export const Search = () => {
   const isOpened = useMemo(() => !!list && !url, [list, url]);
 
   const isDownloaded = useCallback((videoId: string) => {
+    if (!Array.isArray(downloadedFiles)) return false;
     return downloadedFiles.some((file: any) => file.info_dict.id === videoId);
   }, [downloadedFiles]);
 

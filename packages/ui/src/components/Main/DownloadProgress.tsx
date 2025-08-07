@@ -1,6 +1,6 @@
 import { Badge, Flex, Progress } from '@radix-ui/themes';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useContext, useEffect, useMemo } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef } from 'react';
 import { useAnimationFrame } from '../../hooks/useAnimationFrame';
 import { convertFileSize } from '../../utilities/common';
 import { timeout } from '../../utilities/timeout';
@@ -49,19 +49,28 @@ export const DownloadProgress = () => {
 
   const queryClient = useQueryClient();
 
+  const taskRef = useRef<(() => void) | null>(null);
+  
   const task = useCallback(async () => {
     const { data } = await getProgress();
     if (data) {
       if (data.status === 'finished') {
-        stop();
+        taskRef.current?.(); // Stop the animation frame
         finish();
+        
+        // Try multiple approaches to ensure cache is updated
         await queryClient.invalidateQueries({ queryKey: ['downloaded'] });
+        await queryClient.refetchQueries({ queryKey: ['downloaded'] });
+        
+        // Also try to remove the cache entirely and refetch
+        queryClient.removeQueries({ queryKey: ['downloaded'] });
       }
     }
     await timeout(1000 / 60);
-  }, [id]);
+  }, [id, getProgress, finish, queryClient]);
 
   const { start, stop } = useAnimationFrame(task);
+  taskRef.current = stop;
 
   useEffect(() => {
     if (id) {

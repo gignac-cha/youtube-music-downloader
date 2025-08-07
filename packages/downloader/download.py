@@ -52,8 +52,23 @@ YDL_OPTS = {
 def progress_hook(data):
     info_dict = data["info_dict"]
     os.makedirs(OUTPUTS_DIR, exist_ok=True)
-    with open(OUTPUTS_DIR / f'{info_dict["id"]}.json', 'w') as wo:
-        json.dump(data, wo)
+    temp_path = OUTPUTS_DIR / f'{info_dict["id"]}.json.tmp'
+    final_path = OUTPUTS_DIR / f'{info_dict["id"]}.json'
+    
+    try:
+        # Don't write finished status from progress_hook - let postprocessor_hook handle it
+        if data.get("status") == "finished":
+            return
+        
+        # Write to temporary file first
+        with open(temp_path, 'w') as wo:
+            json.dump(data, wo)
+        # Atomically move to final location
+        os.rename(temp_path, final_path)
+    except Exception:
+        # Clean up temp file if it exists
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
 
 def postprocessor_hook(data):
     if data["status"] == "finished":
@@ -77,6 +92,22 @@ def postprocessor_hook(data):
             audio.tag.images.set(3, rbo.read(), "image/jpeg", "cover")
 
         audio.tag.save()
+        
+        # Update progress file to finished status after all processing is complete
+        progress_file = OUTPUTS_DIR / f'{info_dict["id"]}.json'
+        if os.path.exists(progress_file):
+            try:
+                with open(progress_file, 'r') as ro:
+                    progress_data = json.load(ro)
+                progress_data["status"] = "finished"
+                
+                # Write atomically
+                temp_path = OUTPUTS_DIR / f'{info_dict["id"]}.json.tmp'
+                with open(temp_path, 'w') as wo:
+                    json.dump(progress_data, wo)
+                os.rename(temp_path, progress_file)
+            except Exception:
+                pass
 
 def info(url: str):
     opts = YDL_OPTS.copy()
