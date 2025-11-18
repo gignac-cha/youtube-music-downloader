@@ -1,9 +1,10 @@
-import os
 import json
+import os
 import pathlib
-import yt_dlp
+
 import eyed3
 import wget
+import yt_dlp
 
 PROJECT_ROOT = pathlib.Path(__file__).parent.parent.parent.resolve()
 OUTPUTS_DIR = PROJECT_ROOT / "outputs"
@@ -12,11 +13,13 @@ YDL_OPTS = {
     "format": "bestaudio/best",
     "paths": {"home": str(OUTPUTS_DIR)},
     "ffmpeg_location": "/usr/bin/ffmpeg",  # Will be overridden by server.py
-    "postprocessors": [{
-        "key": "FFmpegExtractAudio",
-        "preferredcodec": "mp3",
-        "preferredquality": "320",
-    }],
+    "postprocessors": [
+        {
+            "key": "FFmpegExtractAudio",
+            "preferredcodec": "mp3",
+            "preferredquality": "320",
+        }
+    ],
     "writethumbnail": True,
     # Anti-bot and rate limit bypass settings
     "nocheckcertificate": True,
@@ -50,19 +53,20 @@ YDL_OPTS = {
     },
 }
 
+
 def progress_hook(data):
     info_dict = data["info_dict"]
     os.makedirs(OUTPUTS_DIR, exist_ok=True)
-    temp_path = OUTPUTS_DIR / f'{info_dict["id"]}.json.tmp'
-    final_path = OUTPUTS_DIR / f'{info_dict["id"]}.json'
-    
+    temp_path = OUTPUTS_DIR / f"{info_dict['id']}.json.tmp"
+    final_path = OUTPUTS_DIR / f"{info_dict['id']}.json"
+
     try:
         # Don't write finished status from progress_hook - let postprocessor_hook handle it
         if data.get("status") == "finished":
             return
-        
+
         # Write to temporary file first
-        with open(temp_path, 'w') as wo:
+        with open(temp_path, "w") as wo:
             json.dump(data, wo)
         # Atomically move to final location
         os.rename(temp_path, final_path)
@@ -70,6 +74,7 @@ def progress_hook(data):
         # Clean up temp file if it exists
         if os.path.exists(temp_path):
             os.remove(temp_path)
+
 
 def postprocessor_hook(data):
     if data["status"] == "finished":
@@ -79,7 +84,7 @@ def postprocessor_hook(data):
         thumbnail = next(t for t in reversed(thumbnails) if t["url"].endswith(".jpg"))
         filepath = info_dict["filepath"]
         root, _ = os.path.splitext(filepath)
-        thumbnail_path = f'{root}.jpg'
+        thumbnail_path = f"{root}.jpg"
         if not os.path.exists(thumbnail_path):
             wget.download(thumbnail["url"], out=thumbnail_path)
 
@@ -89,39 +94,41 @@ def postprocessor_hook(data):
         audio.tag.title = info_dict["title"]
         audio.tag.artist = info_dict["artist"]
         audio.tag.album = info_dict["album"]
-        with open(thumbnail_path, 'rb') as rbo:
+        with open(thumbnail_path, "rb") as rbo:
             audio.tag.images.set(3, rbo.read(), "image/jpeg", "cover")
 
         audio.tag.save()
-        
+
         # Update progress file to finished status after all processing is complete
-        progress_file = OUTPUTS_DIR / f'{info_dict["id"]}.json'
+        progress_file = OUTPUTS_DIR / f"{info_dict['id']}.json"
         if os.path.exists(progress_file):
             try:
-                with open(progress_file, 'r') as ro:
+                with open(progress_file) as ro:
                     progress_data = json.load(ro)
                 progress_data["status"] = "finished"
-                
+
                 # Write atomically
-                temp_path = OUTPUTS_DIR / f'{info_dict["id"]}.json.tmp'
-                with open(temp_path, 'w') as wo:
+                temp_path = OUTPUTS_DIR / f"{info_dict['id']}.json.tmp"
+                with open(temp_path, "w") as wo:
                     json.dump(progress_data, wo)
                 os.rename(temp_path, progress_file)
             except Exception:
                 pass
 
+
 def info(url: str):
     opts = YDL_OPTS.copy()
     opts["progress_hooks"] = [progress_hook]
     opts["postprocessor_hooks"] = [postprocessor_hook]
-    
+
     with yt_dlp.YoutubeDL(opts) as youtube:
         return youtube.extract_info(url, download=False)
+
 
 async def download(id: str):
     opts = YDL_OPTS.copy()
     opts["progress_hooks"] = [progress_hook]
     opts["postprocessor_hooks"] = [postprocessor_hook]
-    
+
     with yt_dlp.YoutubeDL(opts) as youtube:
-        youtube.download_with_info_file(str(OUTPUTS_DIR / "info" / f'{id}.json'))
+        youtube.download_with_info_file(str(OUTPUTS_DIR / "info" / f"{id}.json"))
