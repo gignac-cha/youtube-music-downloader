@@ -330,3 +330,15 @@ pyrightconfig.json
 .ionide
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,node,python
+
+
+outputs/
+.claude/
+
+# uv
+.venv/
+.uv-cache/
+uv.lock
+
+# Static files
+packages/server/static/
