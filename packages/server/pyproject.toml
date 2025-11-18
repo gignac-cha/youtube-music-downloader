@@ -1,10 +1,13 @@
 [project]
 name = "youtube-music-server"
-version = "0.1.0"
-description = "Flask REST API server for YouTube music downloader"
+version = "0.2.0"
+description = "FastAPI REST API server for YouTube music downloader"
 requires-python = ">=3.11"
 dependencies = [
-    "flask[async]>=3.1.2",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
     "requests>=2.32.5",
     "lxml>=6.0.2",
     "typer>=0.20.0",
