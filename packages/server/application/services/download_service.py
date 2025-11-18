@@ -2,9 +2,11 @@
 
 import asyncio
 import json
+import logging
 from pathlib import Path
 
 import aiofiles
+from application.services.retry_service import RetryService
 from domain.entities import Download, Progress
 from domain.exceptions import DownloadNotFoundError
 from domain.value_objects import ProgressStatus, VideoId
@@ -14,9 +16,11 @@ from infrastructure.repositories import (
     ProgressRepository,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class DownloadService:
-    """Service for managing video downloads."""
+    """Service for managing video downloads with retry logic."""
 
     def __init__(
         self,
@@ -25,6 +29,7 @@ class DownloadService:
         file_manager: FileManager,
         outputs_dir: Path,
         downloader_module,
+        retry_service: RetryService | None = None,
     ) -> None:
         """Initialize download service."""
         self.progress_repo = progress_repo
@@ -32,6 +37,9 @@ class DownloadService:
         self.file_manager = file_manager
         self.outputs_dir = outputs_dir
         self.downloader = downloader_module
+        self.retry_service = retry_service or RetryService(
+            max_retries=3, base_delay=2.0, max_delay=30.0
+        )
 
     async def initiate_download(self, url: str) -> dict:
         """Initiate a video download asynchronously.
@@ -95,13 +103,34 @@ class DownloadService:
         return info
 
     async def _download_video(self, video_id: str) -> None:
-        """Background task to download video asynchronously.
+        """Background task to download video with retry logic.
 
         Args:
             video_id: Video ID to download
         """
-        # Run blocking download in thread pool
-        await asyncio.to_thread(self.downloader.download, video_id)
+        try:
+            # Retry download operation
+            await self.retry_service.retry_async(
+                lambda: asyncio.to_thread(self.downloader.download, video_id),
+                operation_name=f"Download video {video_id}",
+                retryable_exceptions=(Exception,),
+            )
+            logger.info(f"Successfully downloaded video {video_id}")
+
+        except Exception as e:
+            # Mark download as failed
+            logger.error(f"Failed to download video {video_id}: {e}")
+
+            try:
+                vid = VideoId(value=video_id)
+                progress = Progress(
+                    video_id=vid,
+                    status=ProgressStatus.ERROR,
+                    error_message=str(e),
+                )
+                await self.progress_repo.save(progress)
+            except Exception as save_error:
+                logger.error(f"Failed to save error status: {save_error}")
 
     async def get_progress(self, video_id: VideoId) -> Progress:
         """Get download progress.
