@@ -4,11 +4,26 @@ from contextlib import asynccontextmanager
 
 from core.config import settings
 from core.logging_config import setup_logging
+from domain.exceptions import (
+    DownloadNotFoundError,
+    FileNotFoundError as DomainFileNotFoundError,
+    InvalidVideoIdError,
+    YouTubeAPIError,
+)
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from presentation.exception_handlers import (
+    download_not_found_exception_handler,
+    file_not_found_exception_handler,
+    generic_exception_handler,
+    invalid_video_id_exception_handler,
+    validation_exception_handler,
+    youtube_api_exception_handler,
+)
 from presentation.middleware import SecurityHeadersMiddleware
 from presentation.routers import download, files, search
+from pydantic import ValidationError
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -42,6 +57,14 @@ app = FastAPI(
 # Add rate limiter state and exception handler
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Add custom exception handlers
+app.add_exception_handler(ValidationError, validation_exception_handler)
+app.add_exception_handler(YouTubeAPIError, youtube_api_exception_handler)
+app.add_exception_handler(InvalidVideoIdError, invalid_video_id_exception_handler)
+app.add_exception_handler(DownloadNotFoundError, download_not_found_exception_handler)
+app.add_exception_handler(DomainFileNotFoundError, file_not_found_exception_handler)
+app.add_exception_handler(Exception, generic_exception_handler)
 
 # Add CORS middleware
 if settings.cors_enabled:
