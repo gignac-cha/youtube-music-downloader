@@ -44,7 +44,8 @@ YDL_OPTS = {
     "extract_flat": False,
     "extractor_args": {
         "youtube": {
-            "player_client": ["web"],
+            "player_client": ["ios", "android", "web_safari", "web"],
+            "player_skip": ["webpage"],
         }
     },
 }
