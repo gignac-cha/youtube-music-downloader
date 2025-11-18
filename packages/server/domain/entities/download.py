@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from domain.value_objects.video_id import VideoId
 
@@ -37,7 +38,7 @@ class Download:
         """Return the file name."""
         return self.file_path.name
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert the download to a dictionary representation."""
         return {
             "info_dict": {

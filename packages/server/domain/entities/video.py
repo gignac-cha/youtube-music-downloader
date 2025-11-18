@@ -1,6 +1,7 @@
 """Video entity representing a YouTube video."""
 
 from dataclasses import dataclass
+from typing import Any
 
 from domain.value_objects.video_id import VideoId
 
@@ -33,7 +34,7 @@ class Video:
         """Return the string representation of the video ID."""
         return str(self.id)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert the video to a dictionary representation."""
         return {
             "id": self.video_id_str,

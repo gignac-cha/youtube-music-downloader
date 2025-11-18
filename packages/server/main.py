@@ -90,13 +90,13 @@ if settings.static_dir and settings.static_dir.exists():
 
 
 @app.get("/health")
-async def health_check():
+async def health_check() -> dict[str, str]:
     """Health check endpoint."""
     return {"status": "healthy", "version": "0.2.0"}
 
 
 @app.get("/")
-async def root():
+async def root() -> dict[str, str]:
     """Root endpoint - serve index.html or API info."""
     return {
         "message": "YouTube Music Downloader API",

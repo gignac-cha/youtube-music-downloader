@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import Any
 
 from domain.value_objects.progress_status import ProgressStatus
 from domain.value_objects.video_id import VideoId
@@ -79,7 +80,7 @@ class Progress:
         self.status = ProgressStatus.DOWNLOADING
         self.updated_at = datetime.now(UTC)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert the progress to a dictionary representation."""
         return {
             "info_dict": {"id": str(self.video_id)},
