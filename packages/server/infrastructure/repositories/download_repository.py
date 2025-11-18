@@ -3,6 +3,8 @@
 import json
 from pathlib import Path
 
+import aiofiles
+import aiofiles.os
 from domain.entities import Download
 from domain.value_objects import VideoId
 
@@ -22,23 +24,29 @@ class DownloadRepository:
         return self.info_dir / f"{video_id}.json"
 
     async def save(self, download: Download) -> None:
-        """Save download information to JSON file."""
+        """Save download information to JSON file asynchronously."""
         path = self._get_info_path(download.video_id)
         data = {
             "id": str(download.video_id),
             "title": download.title,
         }
 
-        with path.open("w") as f:
-            json.dump(data, f, indent=2)
+        async with aiofiles.open(path, "w") as f:
+            await f.write(json.dumps(data, indent=2))
 
     async def get(self, video_id: VideoId) -> Download | None:
-        """Get download by video ID."""
-        # Find the MP3 file
-        for file_path in self.outputs_dir.glob("*.mp3"):
-            if f"[{video_id}]" in file_path.name:
-                title = file_path.name.split("[")[0].strip()
-                file_size = file_path.stat().st_size
+        """Get download by video ID asynchronously."""
+        # List files in outputs directory
+        files = await aiofiles.os.listdir(str(self.outputs_dir))
+
+        for filename in files:
+            if filename.endswith(".mp3") and f"[{video_id}]" in filename:
+                file_path = self.outputs_dir / filename
+                title = filename.split("[")[0].strip()
+
+                # Get file size asynchronously
+                stat = await aiofiles.os.stat(str(file_path))
+                file_size = stat.st_size
 
                 return Download(
                     video_id=video_id,
@@ -50,23 +58,32 @@ class DownloadRepository:
         return None
 
     async def exists(self, video_id: VideoId) -> bool:
-        """Check if download exists."""
-        for file_path in self.outputs_dir.glob("*.mp3"):
-            if f"[{video_id}]" in file_path.name:
+        """Check if download exists asynchronously."""
+        files = await aiofiles.os.listdir(str(self.outputs_dir))
+
+        for filename in files:
+            if filename.endswith(".mp3") and f"[{video_id}]" in filename:
                 return True
         return False
 
     async def list_all(self) -> list[Download]:
-        """List all downloads."""
+        """List all downloads asynchronously."""
         downloads = []
 
-        for file_path in self.outputs_dir.glob("*.mp3"):
+        files = await aiofiles.os.listdir(str(self.outputs_dir))
+
+        for filename in files:
+            if not filename.endswith(".mp3"):
+                continue
+
             try:
                 # Extract video ID from filename: "Title [video_id].mp3"
-                filename = file_path.name
                 video_id_str = filename.split("[")[-1].split("]")[0]
                 title = filename.split("[")[0].strip()
-                file_size = file_path.stat().st_size
+
+                file_path = self.outputs_dir / filename
+                stat = await aiofiles.os.stat(str(file_path))
+                file_size = stat.st_size
 
                 video_id = VideoId(value=video_id_str)
                 download = Download(

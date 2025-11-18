@@ -1,10 +1,10 @@
 """Download service for managing video downloads."""
 
 import asyncio
-import concurrent.futures
 import json
 from pathlib import Path
 
+import aiofiles
 from domain.entities import Download, Progress
 from domain.exceptions import DownloadNotFoundError
 from domain.value_objects import ProgressStatus, VideoId
@@ -24,7 +24,6 @@ class DownloadService:
         download_repo: DownloadRepository,
         file_manager: FileManager,
         outputs_dir: Path,
-        executor: concurrent.futures.ThreadPoolExecutor,
         downloader_module,
     ) -> None:
         """Initialize download service."""
@@ -32,11 +31,10 @@ class DownloadService:
         self.download_repo = download_repo
         self.file_manager = file_manager
         self.outputs_dir = outputs_dir
-        self.executor = executor
         self.downloader = downloader_module
 
     async def initiate_download(self, url: str) -> dict:
-        """Initiate a video download.
+        """Initiate a video download asynchronously.
 
         Args:
             url: YouTube video URL
@@ -47,8 +45,8 @@ class DownloadService:
         Raises:
             DownloadAlreadyExistsError: If video is already downloaded
         """
-        # Get video info
-        info = self.downloader.info(url)
+        # Get video info (blocking operation, run in thread pool)
+        info = await asyncio.to_thread(self.downloader.info, url)
         video_id = VideoId(value=info["id"])
 
         # Check if already downloaded
@@ -69,20 +67,20 @@ class DownloadService:
                 )
                 await self.progress_repo.save(completion_progress)
 
-                # Save video info
+                # Save video info asynchronously
                 info_path = self.outputs_dir / "info" / f"{video_id}.json"
                 info_path.parent.mkdir(parents=True, exist_ok=True)
-                with info_path.open("w") as f:
-                    json.dump(info, f)
+                async with aiofiles.open(info_path, "w") as f:
+                    await f.write(json.dumps(info, indent=2))
 
             return info
 
         # Not downloaded yet, proceed with download
-        # Save video info
+        # Save video info asynchronously
         info_path = self.outputs_dir / "info" / f"{video_id}.json"
         info_path.parent.mkdir(parents=True, exist_ok=True)
-        with info_path.open("w") as f:
-            json.dump(info, f)
+        async with aiofiles.open(info_path, "w") as f:
+            await f.write(json.dumps(info, indent=2))
 
         # Create initial progress
         initial_progress = Progress(
@@ -91,13 +89,19 @@ class DownloadService:
         )
         await self.progress_repo.save(initial_progress)
 
-        # Submit download task to executor
-        self.executor.submit(
-            lambda vid: asyncio.run(self.downloader.download(vid)),
-            str(video_id),
-        )
+        # Submit download task as background asyncio task
+        asyncio.create_task(self._download_video(str(video_id)))
 
         return info
+
+    async def _download_video(self, video_id: str) -> None:
+        """Background task to download video asynchronously.
+
+        Args:
+            video_id: Video ID to download
+        """
+        # Run blocking download in thread pool
+        await asyncio.to_thread(self.downloader.download, video_id)
 
     async def get_progress(self, video_id: VideoId) -> Progress:
         """Get download progress.

@@ -1,6 +1,5 @@
 """Dependency injection for FastAPI."""
 
-import concurrent.futures
 import sys
 
 from application.services import DownloadService, FileService, SearchService
@@ -19,7 +18,6 @@ sys.path.append(str(PROJECT_ROOT / "packages"))
 import downloader.download
 
 # Global instances
-_executor: concurrent.futures.ThreadPoolExecutor | None = None
 _youtube_client: YouTubeClient | None = None
 _progress_repo: ProgressRepository | None = None
 _download_repo: DownloadRepository | None = None
@@ -27,16 +25,6 @@ _file_manager: FileManager | None = None
 _search_service: SearchService | None = None
 _download_service: DownloadService | None = None
 _file_service: FileService | None = None
-
-
-def get_executor() -> concurrent.futures.ThreadPoolExecutor:
-    """Get or create ThreadPoolExecutor."""
-    global _executor
-    if _executor is None:
-        _executor = concurrent.futures.ThreadPoolExecutor(
-            max_workers=settings.max_workers
-        )
-    return _executor
 
 
 def get_youtube_client() -> YouTubeClient:
@@ -87,7 +75,6 @@ def get_download_service() -> DownloadService:
         progress_repo = get_progress_repository()
         download_repo = get_download_repository()
         file_manager = get_file_manager()
-        executor = get_executor()
 
         # Set FFmpeg location
         downloader.download.YDL_OPTS["ffmpeg_location"] = settings.ffmpeg_location
@@ -97,7 +84,6 @@ def get_download_service() -> DownloadService:
             download_repo=download_repo,
             file_manager=file_manager,
             outputs_dir=settings.outputs_dir,
-            executor=executor,
             downloader_module=downloader.download,
         )
     return _download_service

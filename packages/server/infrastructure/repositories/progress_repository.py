@@ -3,6 +3,8 @@
 import json
 from pathlib import Path
 
+import aiofiles
+import aiofiles.os
 from domain.entities import Progress
 from domain.value_objects import ProgressStatus, VideoId
 
@@ -20,23 +22,24 @@ class ProgressRepository:
         return self.outputs_dir / f"{video_id}.json"
 
     async def save(self, progress: Progress) -> None:
-        """Save progress information to JSON file."""
+        """Save progress information to JSON file asynchronously."""
         path = self._get_progress_path(progress.video_id)
         data = progress.to_dict()
 
-        with path.open("w") as f:
-            json.dump(data, f, indent=2)
+        async with aiofiles.open(path, "w") as f:
+            await f.write(json.dumps(data, indent=2))
 
     async def get(self, video_id: VideoId) -> Progress | None:
-        """Get progress information by video ID."""
+        """Get progress information by video ID asynchronously."""
         path = self._get_progress_path(video_id)
 
-        if not path.exists():
+        if not await aiofiles.os.path.exists(str(path)):
             return None
 
         try:
-            with path.open() as f:
-                data = json.load(f)
+            async with aiofiles.open(path) as f:
+                content = await f.read()
+                data = json.loads(content)
 
             # Handle empty progress files
             if not data:
@@ -62,12 +65,12 @@ class ProgressRepository:
             )
 
     async def exists(self, video_id: VideoId) -> bool:
-        """Check if progress exists for video ID."""
+        """Check if progress exists for video ID asynchronously."""
         path = self._get_progress_path(video_id)
-        return path.exists()
+        return await aiofiles.os.path.exists(str(path))
 
     async def delete(self, video_id: VideoId) -> None:
-        """Delete progress information."""
+        """Delete progress information asynchronously."""
         path = self._get_progress_path(video_id)
-        if path.exists():
-            path.unlink()
+        if await aiofiles.os.path.exists(str(path)):
+            await aiofiles.os.remove(str(path))

@@ -3,8 +3,8 @@
 import json
 import urllib.parse
 
+import httpx
 import lxml.etree
-import requests
 from domain.entities import Video
 from domain.exceptions import YouTubeAPIError
 from domain.value_objects import VideoId
@@ -21,7 +21,7 @@ class YouTubeClient:
         self.timeout = timeout
 
     async def search(self, query: str) -> list[Video]:
-        """Search for videos on YouTube.
+        """Search for videos on YouTube asynchronously.
 
         Args:
             query: Search query string
@@ -36,15 +36,16 @@ class YouTubeClient:
             # Build YouTube search URL
             url = self._build_search_url(query)
 
-            # Make request to YouTube
-            response = requests.get(url, timeout=self.timeout)
-            response.raise_for_status()
+            # Make async request to YouTube
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.get(url)
+                response.raise_for_status()
 
             # Parse HTML response
             videos = self._parse_search_results(response.text)
             return videos
 
-        except requests.RequestException as e:
+        except httpx.HTTPError as e:
             raise YouTubeAPIError(f"Failed to search YouTube: {e}") from e
         except Exception as e:
             raise YouTubeAPIError(f"Unexpected error during search: {e}") from e
