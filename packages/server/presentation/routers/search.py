@@ -4,13 +4,19 @@ from typing import Annotated
 
 from application.schemas import ErrorResponse, SearchRequest, SearchResponse
 from application.services import SearchService
+from core.config import settings
 from core.logging_config import get_logger
 from domain.exceptions import YouTubeAPIError
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from presentation.dependencies import get_search_service
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 router = APIRouter(prefix="/api/v1", tags=["search"])
 logger = get_logger(__name__)
+
+# Initialize rate limiter for this router
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.post(
@@ -18,10 +24,13 @@ logger = get_logger(__name__)
     response_model=SearchResponse,
     responses={
         400: {"model": ErrorResponse, "description": "Invalid search query"},
+        429: {"description": "Too many requests"},
         500: {"model": ErrorResponse, "description": "Search failed"},
     },
 )
+@limiter.limit(settings.rate_limit_search)
 async def search_videos(
+    http_request: Request,
     request: SearchRequest,
     search_service: Annotated[SearchService, Depends(get_search_service)],
 ) -> SearchResponse:

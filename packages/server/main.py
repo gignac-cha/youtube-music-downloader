@@ -4,9 +4,14 @@ from contextlib import asynccontextmanager
 
 from core.config import settings
 from core.logging_config import setup_logging
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from presentation.middleware import SecurityHeadersMiddleware
 from presentation.routers import download, files, search
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 
 @asynccontextmanager
@@ -19,6 +24,13 @@ async def lifespan(app: FastAPI):
     pass
 
 
+# Initialize rate limiter
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=[settings.rate_limit_default],
+    enabled=settings.rate_limit_enabled,
+)
+
 # Create FastAPI application
 app = FastAPI(
     title="YouTube Music Downloader API",
@@ -26,6 +38,23 @@ app = FastAPI(
     version="0.2.0",
     lifespan=lifespan,
 )
+
+# Add rate limiter state and exception handler
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Add CORS middleware
+if settings.cors_enabled:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins,
+        allow_credentials=settings.cors_allow_credentials,
+        allow_methods=settings.cors_allow_methods,
+        allow_headers=settings.cors_allow_headers,
+    )
+
+# Add security headers middleware
+app.add_middleware(SecurityHeadersMiddleware)
 
 # Include routers
 app.include_router(search.router)

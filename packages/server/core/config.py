@@ -28,6 +28,19 @@ class Settings(BaseSettings):
     # YouTube client settings
     youtube_timeout: int = 30
 
+    # Security settings
+    rate_limit_enabled: bool = True
+    rate_limit_default: str = "100/minute"  # Default rate limit
+    rate_limit_search: str = "20/minute"  # Search endpoint rate limit
+    rate_limit_download: str = "10/minute"  # Download endpoint rate limit
+
+    # CORS settings
+    cors_enabled: bool = True
+    cors_origins: list[str] = ["http://localhost:3000", "http://localhost:5000"]
+    cors_allow_credentials: bool = True
+    cors_allow_methods: list[str] = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    cors_allow_headers: list[str] = ["*"]
+
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",

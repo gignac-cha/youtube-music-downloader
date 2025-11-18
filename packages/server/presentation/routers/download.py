@@ -10,14 +10,20 @@ from application.schemas import (
     ProgressResponse,
 )
 from application.services import DownloadService
+from core.config import settings
 from core.logging_config import get_logger
 from domain.exceptions import DownloadNotFoundError, InvalidVideoIdError
 from domain.value_objects import VideoId
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from presentation.dependencies import get_download_service
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 router = APIRouter(prefix="/api/v1", tags=["download"])
 logger = get_logger(__name__)
+
+# Initialize rate limiter for this router
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.post(
@@ -27,10 +33,13 @@ logger = get_logger(__name__)
     responses={
         400: {"model": ErrorResponse, "description": "Invalid URL"},
         403: {"model": ErrorResponse, "description": "YouTube bot detection"},
+        429: {"description": "Too many requests"},
         500: {"model": ErrorResponse, "description": "Download failed"},
     },
 )
+@limiter.limit(settings.rate_limit_download)
 async def initiate_download(
+    http_request: Request,
     request: DownloadRequest,
     download_service: Annotated[DownloadService, Depends(get_download_service)],
 ) -> DownloadResponse:
