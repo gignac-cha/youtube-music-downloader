@@ -238,12 +238,12 @@ def get_downloaded():
 def serve(
     host: str = typer.Option("0.0.0.0", help="Host to bind to"),
     port: int = typer.Option(5000, help="Port to listen on"),
-    debug: bool = typer.Option(False, help="Enable debug mode"),
     ffmpeg_path: str = typer.Option("/usr/bin/ffmpeg", help="Path to ffmpeg binary")
 ):
     """Run the Flask server"""
     downloader.download.YDL_OPTS["ffmpeg_location"] = ffmpeg_path
-    server.run(host=host, port=port, debug=debug)
+    debug_mode = os.environ.get("FLASK_DEBUG") == "True"
+    server.run(host=host, port=port, debug=debug_mode)
 
 if __name__ == "__main__":
     app()
