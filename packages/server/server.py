@@ -16,7 +16,7 @@ PROJECT_ROOT = pathlib.Path(__file__).parent.parent.parent.resolve()
 OUTPUTS_DIR = PROJECT_ROOT / "outputs"
 sys.path.append(str(PROJECT_ROOT / "packages"))
 
-import downloader.download
+from downloader import YDL_OPTS, download, info
 
 app = typer.Typer()
 server = flask.Flask(__name__, static_url_path="")
@@ -116,8 +116,8 @@ async def post_download():
         return flask.jsonify(error=True, message="invalid url"), 400
 
     try:
-        info = downloader.download.info(url)
-        video_id = info["id"]
+        info_data = info(url)
+        video_id = info_data["id"]
 
         # Check if already downloaded
         already_downloaded, existing_file = is_already_downloaded(video_id)
@@ -125,7 +125,7 @@ async def post_download():
             # Create progress file showing completion
             os.makedirs(OUTPUTS_DIR / "info", exist_ok=True)
             with open(OUTPUTS_DIR / "info" / f"{video_id}.json", "w") as wo:
-                json.dump(info, wo)
+                json.dump(info_data, wo)
 
             # Create completion status immediately
             file_size = os.path.getsize(OUTPUTS_DIR / existing_file)
@@ -140,20 +140,20 @@ async def post_download():
             with open(OUTPUTS_DIR / f"{video_id}.json", "w") as wo:
                 json.dump(completion_data, wo)
 
-            return flask.jsonify(error=False, data=info), 202
+            return flask.jsonify(error=False, data=info_data), 202
 
         # Not downloaded yet, proceed with normal download
         os.makedirs(OUTPUTS_DIR / "info", exist_ok=True)
 
-        with open(OUTPUTS_DIR / "info" / f"{info['id']}.json", "w") as wo:
-            json.dump(info, wo)
-        with open(OUTPUTS_DIR / f"{info['id']}.json", "w") as wo:
+        with open(OUTPUTS_DIR / "info" / f"{info_data['id']}.json", "w") as wo:
+            json.dump(info_data, wo)
+        with open(OUTPUTS_DIR / f"{info_data['id']}.json", "w") as wo:
             json.dump({}, wo)
 
         executor.submit(
-            lambda id: asyncio.run(downloader.download.download(id)), info["id"]
+            lambda id: asyncio.run(download(id)), info_data["id"]
         )
-        return flask.jsonify(error=False, data=info), 202
+        return flask.jsonify(error=False, data=info_data), 202
 
     except Exception as e:
         error_msg = str(e)
@@ -261,7 +261,7 @@ def serve(
     ffmpeg_path: str = typer.Option("/usr/bin/ffmpeg", help="Path to ffmpeg binary"),
 ):
     """Run the Flask server"""
-    downloader.download.YDL_OPTS["ffmpeg_location"] = ffmpeg_path
+    YDL_OPTS["ffmpeg_location"] = ffmpeg_path
     debug_mode = os.environ.get("FLASK_DEBUG") == "True"
     server.run(host=host, port=port, debug=debug_mode)
 
