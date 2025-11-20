@@ -148,7 +148,13 @@ async def post_download():
         with open(OUTPUTS_DIR / "info" / f"{info_data['id']}.json", "w") as wo:
             json.dump(info_data, wo)
         with open(OUTPUTS_DIR / f"{info_data['id']}.json", "w") as wo:
-            json.dump({}, wo)
+            json.dump({
+                "status": "downloading",
+                "downloaded_bytes": 0,
+                "total_bytes": 0,
+                "speed": 0,
+                "elapsed": 0
+            }, wo)
 
         executor.submit(
             lambda id: asyncio.run(download(id)), info_data["id"]
@@ -206,12 +212,15 @@ def get_info_id(id):
     try:
         with open(path) as ro:
             data = json.load(ro)
+            # Use total_bytes_estimate as fallback for total_bytes
+            total_bytes = data.get("total_bytes") or data.get("total_bytes_estimate", 0)
+
             response_data = dict(
                 info_dict=dict(id=data.get("info_dict", {}).get("id")),
                 status=data.get("status", "downloading"),
                 speed=data.get("speed", 0),
                 downloaded_bytes=data.get("downloaded_bytes", 0),
-                total_bytes=data.get("total_bytes", 1),
+                total_bytes=total_bytes,
                 elapsed=data.get("elapsed", 0),
             )
             return flask.jsonify(error=False, data=response_data), 200
@@ -222,7 +231,7 @@ def get_info_id(id):
             status="downloading",
             speed=0,
             downloaded_bytes=0,
-            total_bytes=1,
+            total_bytes=0,
             elapsed=0,
         )
         return flask.jsonify(error=False, data=response_data), 200

@@ -80,21 +80,28 @@ export const DownloadProgress = () => {
   }, [id]);
 
   const progressValue = useMemo(
-    () =>
-      progressData
-        ? progressData.downloaded_bytes / progressData.total_bytes
-        : 0,
+    () => {
+      if (!progressData || !progressData.total_bytes || progressData.total_bytes === 0) {
+        return null;  // indeterminate state
+      }
+      return progressData.downloaded_bytes / progressData.total_bytes;
+    },
     [progressData],
   );
 
+  // Don't render progress bar if there's no active download or if it's finished
+  if (!id || progressData?.status === 'finished') {
+    return null;
+  }
+
   return (
     <Flex direction={'column'} gap={'2'}>
-      <Progress value={progressValue} max={1} />
+      <Progress value={progressValue ?? undefined} max={1} />
       {progressData && (
         <Flex direction={'row-reverse'} gap={'2'}>
           <Badge>{convertFileSize(progressData.speed)}/s</Badge>
           <Badge>{progressData.elapsed.toFixed(2)}s</Badge>
-          <Badge>{(progressValue * 100).toFixed(2)}%</Badge>
+          {progressValue !== null && <Badge>{(progressValue * 100).toFixed(2)}%</Badge>}
         </Flex>
       )}
     </Flex>
