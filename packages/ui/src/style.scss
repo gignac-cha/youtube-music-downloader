@@ -1,0 +1,16 @@
+// Remove default details/summary marker for all browsers
+details summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+
+  // Chrome, Safari, Edge
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  // Firefox
+  &::marker {
+    content: '';
+  }
+}

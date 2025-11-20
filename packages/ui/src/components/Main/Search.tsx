@@ -1,5 +1,6 @@
 import {
   CheckIcon,
+  ChevronDownIcon,
   DownloadIcon,
   EyeOpenIcon,
   MagnifyingGlassIcon,
@@ -19,7 +20,7 @@ import {
   TextField,
 } from '@radix-ui/themes';
 import { useQuery } from '@tanstack/react-query';
-import { useCallback, useContext, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { getDownloaded } from '../../api/downloaded';
 import { DownloaderContext } from './DownloaderContext';
 
@@ -111,6 +112,7 @@ export const Search = () => {
   }, [requestSearch, search, setList]);
 
   const isOpened = useMemo(() => !!list && !url, [list, url]);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const detailsRef = useRef<HTMLDetailsElement>(null);
 
@@ -118,6 +120,7 @@ export const Search = () => {
   useEffect(() => {
     if (detailsRef.current) {
       detailsRef.current.open = isOpened;
+      setDetailsOpen(isOpened);
     }
   }, [isOpened]);
 
@@ -193,8 +196,26 @@ export const Search = () => {
           <ResetIcon />
         </IconButton>
       </Flex>
-      <details ref={detailsRef} open={isOpened}>
-        <summary>Search results ({list?.length ?? 0} results)</summary>
+      <details
+        ref={detailsRef}
+        open={isOpened}
+        onToggle={(e) => setDetailsOpen(e.currentTarget.open)}
+      >
+        <summary style={{ padding: '8px 0' }}>
+          <Flex direction={'row'} align={'center'} gap={'2'}>
+            <ChevronDownIcon
+              width={16}
+              height={16}
+              style={{
+                transform: detailsOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
+                transition: 'transform 0.2s ease',
+              }}
+            />
+            <Text size={'2'} weight={'medium'}>
+              검색 결과 ({list?.length ?? 0}개)
+            </Text>
+          </Flex>
+        </summary>
         <Flex direction={'column'} gap={'1'}>
           {list?.map((item: SearchResultItem) => (
             <Card size={'1'} key={item.id}>
