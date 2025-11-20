@@ -19,7 +19,7 @@ import {
   TextField,
 } from '@radix-ui/themes';
 import { useQuery } from '@tanstack/react-query';
-import { useCallback, useContext, useMemo } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef } from 'react';
 import { getDownloaded } from '../../api/downloaded';
 import { DownloaderContext } from './DownloaderContext';
 
@@ -112,6 +112,15 @@ export const Search = () => {
 
   const isOpened = useMemo(() => !!list && !url, [list, url]);
 
+  const detailsRef = useRef<HTMLDetailsElement>(null);
+
+  // Force details element to sync with isOpened state
+  useEffect(() => {
+    if (detailsRef.current) {
+      detailsRef.current.open = isOpened;
+    }
+  }, [isOpened]);
+
   const isDownloaded = useCallback((videoId: string) => {
     if (!Array.isArray(downloadedFiles)) return false;
     return downloadedFiles.some((file: any) => file.info_dict.id === videoId);
@@ -184,7 +193,7 @@ export const Search = () => {
           <ResetIcon />
         </IconButton>
       </Flex>
-      <details open={isOpened}>
+      <details ref={detailsRef} open={isOpened}>
         <summary>Search results ({list?.length ?? 0} results)</summary>
         <Flex direction={'column'} gap={'1'}>
           {list?.map((item: SearchResultItem) => (

@@ -57,13 +57,9 @@ export const DownloadProgress = () => {
       if (data.status === 'finished') {
         taskRef.current?.(); // Stop the animation frame
         finish();
-        
-        // Try multiple approaches to ensure cache is updated
+
+        // Invalidate queries to trigger automatic refetch
         await queryClient.invalidateQueries({ queryKey: ['downloaded'] });
-        await queryClient.refetchQueries({ queryKey: ['downloaded'] });
-        
-        // Also try to remove the cache entirely and refetch
-        queryClient.removeQueries({ queryKey: ['downloaded'] });
       }
     }
     await timeout(1000 / 60);

@@ -39,7 +39,12 @@ const reducer: Reducer<typeof initialState, DownloaderAction> = (
     case 'searched':
       return { ...prevState, state: 'ready', list: action.list };
     case 'update-url':
-      return { ...prevState, url: action.url };
+      // Reset to ready state if we're finished and selecting a new URL
+      return {
+        ...prevState,
+        url: action.url,
+        state: prevState.state === 'finished' ? 'ready' : prevState.state
+      };
     case 'request-download':
       return { ...prevState, state: 'requesting' };
     case 'progress':
