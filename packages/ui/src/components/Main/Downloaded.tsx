@@ -1,12 +1,16 @@
 import {
+  CheckIcon,
+  Cross2Icon,
   DownloadIcon,
   PauseIcon,
   PlayIcon,
   ReloadIcon,
+  TrashIcon,
 } from '@radix-ui/react-icons';
 import {
   Badge,
   Box,
+  Button,
   Card,
   Flex,
   Heading,
@@ -19,7 +23,7 @@ import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { convertFileSize } from '../../utilities/common';
 
-import { getDownloaded } from '../../api/downloaded';
+import { deleteDownloaded, getDownloaded } from '../../api/downloaded';
 
 const useAudio = (element: HTMLAudioElement) => {
   const [isPlaying, setPlaying] = useState(false);
@@ -70,6 +74,31 @@ const ListItem = ({
   title: string;
   total_bytes: number;
 }) => {
+  const queryClient = useQueryClient();
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleDelete = () => {
+    setIsDeleting(true);
+  };
+
+  const handleConfirm = async () => {
+    setIsLoading(true);
+    try {
+      await deleteDownloaded(id);
+      // Refresh the list after successful deletion
+      queryClient.invalidateQueries({ queryKey: ['downloaded'] });
+    } catch (error) {
+      console.error('Failed to delete:', error);
+      setIsLoading(false);
+    }
+    setIsDeleting(false);
+  };
+
+  const handleCancel = () => {
+    setIsDeleting(false);
+  };
+
   return (
     <Table.Row>
       <Table.Cell>
@@ -81,6 +110,39 @@ const ListItem = ({
           </Box>
           <Badge>{convertFileSize(total_bytes)}</Badge>
           <AudioPlayer src={`/play/${id}`} />
+
+          {!isDeleting ? (
+            <IconButton
+              size={'1'}
+              color="red"
+              variant="soft"
+              onClick={handleDelete}
+              disabled={isLoading}
+            >
+              <TrashIcon />
+            </IconButton>
+          ) : (
+            <Flex gap={'1'}>
+              <IconButton
+                size={'1'}
+                color="red"
+                variant="solid"
+                onClick={handleConfirm}
+                disabled={isLoading}
+              >
+                <CheckIcon />
+              </IconButton>
+              <IconButton
+                size={'1'}
+                color="gray"
+                variant="soft"
+                onClick={handleCancel}
+                disabled={isLoading}
+              >
+                <Cross2Icon />
+              </IconButton>
+            </Flex>
+          )}
         </Flex>
       </Table.Cell>
     </Table.Row>
@@ -97,7 +159,7 @@ const List = () => {
     <Table.Root>
       <Table.Body>
         {data.map(({ info_dict: { id, title }, total_bytes }) => (
-          <ListItem id={id} title={title} total_bytes={total_bytes} />
+          <ListItem key={id} id={id} title={title} total_bytes={total_bytes} />
         ))}
       </Table.Body>
     </Table.Root>

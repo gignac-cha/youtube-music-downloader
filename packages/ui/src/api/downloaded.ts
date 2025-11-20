@@ -22,3 +22,25 @@ export const getDownloaded = async () => {
   }
   return data.data;
 };
+
+type DeleteResponse =
+  | {
+      error: false;
+      message: string;
+      deleted_files: string[];
+    }
+  | {
+      error: true;
+      message: string;
+    };
+
+export const deleteDownloaded = async (id: string) => {
+  const response = await fetch(`/api/v1/download/${id}`, {
+    method: 'DELETE',
+  });
+  const data: DeleteResponse = await response.json();
+  if (data.error) {
+    throw new Error(data.message);
+  }
+  return data;
+};

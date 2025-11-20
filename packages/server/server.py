@@ -254,6 +254,41 @@ def get_downloaded():
     return flask.jsonify(error=False, data=data)
 
 
+@server.delete("/api/v1/download/<id>")
+def delete_download(id):
+    """Delete all files associated with a downloaded video"""
+    try:
+        deleted_files = []
+
+        # Find and delete all files with the video ID
+        for filename in os.listdir(OUTPUTS_DIR):
+            if f"[{id}]" in filename:
+                file_path = OUTPUTS_DIR / filename
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
+                    deleted_files.append(filename)
+
+        # Delete info file
+        info_file = OUTPUTS_DIR / "info" / f"{id}.json"
+        if os.path.exists(info_file):
+            os.remove(info_file)
+            deleted_files.append(f"info/{id}.json")
+
+        # Delete progress file
+        progress_file = OUTPUTS_DIR / f"{id}.json"
+        if os.path.exists(progress_file):
+            os.remove(progress_file)
+            deleted_files.append(f"{id}.json")
+
+        if deleted_files:
+            return flask.jsonify(error=False, message="Files deleted successfully", deleted_files=deleted_files), 200
+        else:
+            return flask.jsonify(error=True, message="No files found for this ID"), 404
+
+    except Exception as e:
+        return flask.jsonify(error=True, message=f"Failed to delete files: {str(e)}"), 500
+
+
 @app.command()
 def serve(
     host: str = typer.Option("0.0.0.0", help="Host to bind to"),
