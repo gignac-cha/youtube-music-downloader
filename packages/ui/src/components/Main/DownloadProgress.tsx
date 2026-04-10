@@ -1,10 +1,16 @@
-import { Badge, Flex, Progress } from '@radix-ui/themes';
+import {
+  ArrowDownIcon,
+  CheckCircledIcon,
+  CrossCircledIcon,
+  UpdateIcon,
+} from '@radix-ui/react-icons';
+import { Badge, Flex, Progress, Text } from '@radix-ui/themes';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useContext, useEffect, useMemo, useRef } from 'react';
-import { useAnimationFrame } from '../../hooks/useAnimationFrame';
+import { useEffect, useMemo } from 'react';
+import { messages } from '../../constants/messages';
+import { useDownloaderStore } from '../../stores/downloaderStore';
+import { useToast } from '../Toast';
 import { convertFileSize } from '../../utilities/common';
-import { timeout } from '../../utilities/timeout';
-import { DownloaderContext } from './DownloaderContext';
 
 type DownloadProgressData =
   | {
@@ -34,70 +40,93 @@ const getInfoID = async (id: string) => {
   return data.data;
 };
 
-export const DownloadProgress = () => {
-  const { id, finish } = useContext(DownloaderContext);
+const StatusIcon = ({ status }: { status: string }) => {
+  switch (status) {
+    case 'downloading':
+      return <ArrowDownIcon width={14} height={14} />;
+    case 'finished':
+      return <CheckCircledIcon width={14} height={14} />;
+    case 'error':
+      return <CrossCircledIcon width={14} height={14} />;
+    default:
+      return <UpdateIcon width={14} height={14} />;
+  }
+};
 
-  const { data: progressData, refetch: getProgress } = useQuery({
-    queryKey: ['info', id],
-    queryFn: () => {
-      if (id) {
-        return getInfoID(id);
+export const DownloadProgress = () => {
+  const downloadId = useDownloaderStore((s) => s.downloadId);
+  const setFinished = useDownloaderStore((s) => s.setFinished);
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+
+  const { data: progressData } = useQuery({
+    queryKey: ['info', downloadId],
+    queryFn: () => getInfoID(downloadId!),
+    enabled: !!downloadId,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (data?.status === 'finished' || data?.status === 'error') {
+        return false;
       }
+      return 1000;
     },
-    enabled: false,
   });
 
-  const queryClient = useQueryClient();
-
-  const taskRef = useRef<(() => void) | null>(null);
-  
-  const task = useCallback(async () => {
-    const { data } = await getProgress();
-    if (data) {
-      if (data.status === 'finished') {
-        taskRef.current?.(); // Stop the animation frame
-        finish();
-
-        // Invalidate queries to trigger automatic refetch
-        await queryClient.invalidateQueries({ queryKey: ['downloaded'] });
-      }
-    }
-    await timeout(1000 / 60);
-  }, [id, getProgress, finish, queryClient]);
-
-  const { start, stop } = useAnimationFrame(task);
-  taskRef.current = stop;
-
   useEffect(() => {
-    if (id) {
-      start();
+    if (progressData?.status === 'finished') {
+      setFinished();
+      queryClient.invalidateQueries({ queryKey: ['downloaded'] });
+      showToast('success', messages.download.complete);
+    } else if (progressData?.status === 'error') {
+      showToast('error', messages.download.error);
     }
-    return () => stop();
-  }, [id]);
+  }, [progressData?.status, setFinished, queryClient, showToast]);
 
-  const progressValue = useMemo(
-    () => {
-      if (!progressData || !progressData.total_bytes || progressData.total_bytes === 0) {
-        return null;  // indeterminate state
-      }
-      return progressData.downloaded_bytes / progressData.total_bytes;
-    },
-    [progressData],
-  );
+  const progressValue = useMemo(() => {
+    if (
+      !progressData ||
+      !progressData.total_bytes ||
+      progressData.total_bytes === 0
+    ) {
+      return null;
+    }
+    return progressData.downloaded_bytes / progressData.total_bytes;
+  }, [progressData]);
 
-  // Don't render progress bar if there's no active download or if it's finished
-  if (!id || progressData?.status === 'finished') {
+  const eta = useMemo(() => {
+    if (!progressData || !progressData.speed || progressData.speed <= 0)
+      return null;
+    const remainingBytes =
+      progressData.total_bytes - progressData.downloaded_bytes;
+    if (remainingBytes <= 0) return null;
+    return remainingBytes / progressData.speed;
+  }, [progressData]);
+
+  if (!downloadId || progressData?.status === 'finished') {
     return null;
   }
 
   return (
-    <Flex direction={'column'} gap={'2'}>
+    <Flex direction="column" gap="2" aria-live="polite" aria-busy="true">
+      <Flex direction="row" align="center" gap="2">
+        <StatusIcon status={progressData?.status ?? 'downloading'} />
+        <Text size="2" weight="medium">
+          {messages.download.progress}
+        </Text>
+        {eta !== null && (
+          <Text size="1" color="gray">
+            {messages.download.eta(eta)}
+          </Text>
+        )}
+      </Flex>
       <Progress value={progressValue ?? undefined} max={1} />
       {progressData && (
-        <Flex direction={'row-reverse'} gap={'2'}>
+        <Flex direction="row-reverse" gap="2">
           <Badge>{convertFileSize(progressData.speed)}/s</Badge>
           <Badge>{progressData.elapsed.toFixed(2)}s</Badge>
-          {progressValue !== null && <Badge>{(progressValue * 100).toFixed(2)}%</Badge>}
+          {progressValue !== null && (
+            <Badge>{(progressValue * 100).toFixed(2)}%</Badge>
+          )}
         </Flex>
       )}
     </Flex>

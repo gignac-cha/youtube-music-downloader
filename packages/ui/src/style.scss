@@ -14,3 +14,75 @@ details summary {
     content: '';
   }
 }
+
+// Progress bar animation
+[role='progressbar'] {
+  transition: width 0.3s ease;
+}
+
+// Search results scrollable area
+details > div {
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray-6) transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--gray-6);
+    border-radius: 3px;
+  }
+}
+
+// Focus visible styles for keyboard navigation
+*:focus-visible {
+  outline: 2px solid var(--accent-9);
+  outline-offset: 2px;
+}
+
+// Card hover effect for search results
+[role='listitem'] > div {
+  transition: background-color 0.15s ease;
+}
+
+// Responsive adjustments
+@media (max-width: 640px) {
+  // Larger touch targets on mobile
+  button,
+  [role='button'] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  // Stack download controls vertically on narrow screens
+  main {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+}
+
+// Table row hover
+table tbody tr:hover {
+  background-color: var(--gray-2);
+}
+
+// Toast animation
+@keyframes toast-slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+[data-radix-toast-viewport] > * {
+  animation: toast-slide-in 0.2s ease-out;
+}
